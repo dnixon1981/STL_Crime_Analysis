@@ -38,51 +38,62 @@ arcpy.MakeXYEventLayer_management( outfile + '/' + os.path.splitext(csvFile)[0],
 arcpy.FeatureClassToFeatureClass_conversion("Temp_Points", outfile, outName)
 pointsVar = outfile + '\\' + outName
 
-arcpy.AddField_management(pointsVar, "Short_Desc", "TEXT", "", "", 20, "Short Crime Description", "NULLABLE", "REQUIRED")
-fields = ['Description', 'Short_Desc']
+arcpy.AddField_management(pointsVar, "Short_Desc", "TEXT", "", "", 20 , "Short Crime Description", "NULLABLE", "REQUIRED")
+arcpy.AddField_management(pointsVar, "Cri_Weight", "LONG", "", "", 20, "Crime Weighting", "NULLABLE", "REQUIRED")
+fields = ['Description', 'Short_Desc', 'Cri_Weight']
 
 #updateCursor to combine multiple/various crime types into categories
 with arcpy.da.UpdateCursor(pointsVar, fields) as cursor:
     for row in cursor:
         if "ASSAULT" in row[0] or "ASSLT" in row[0] or "ASLT" in row[0]:
             row[1] = 'ASSAULT'
+            row[2] = 15
         elif "ARSON" in row[0]:
             row[1] = 'ARSON'
+            row[2] = 13
         elif "THEFT" in row[0] or "LARCENY" in row[0] or "BURGLARY" in row[0] or "STOLEN" in row[0] or "STLG" in row[0] \
             or "ROBBERY" in row[0] or "LARC" in row[0] or "FRAUD" in row[0] or "FAILURE TO RETURN" in row[0] or "EMBEZZLEMENT" in row[0] or "FORGERY" in row[0]:
             row[1] = 'THEFT'
+            row[2] = 9
         elif "DESTRUCTION" in row[0]:
             row[1] = 'DESTRUCTION'
+            row[2] = 12
         elif "DISORDERLY" in row[0]:
             row[1] = 'DISORDERLY'
+            row[2] = 7
         elif "DRUGS" in row[0] or "LIQUOR" in row[0]:
             row[1] = 'DRUGS-LIQUOR'
+            row[2] = 8
         elif "DUI" in row[0]:
             row[1] = 'DUI'
+            row[2] = 14
         elif "WEAPONS" in row[0]:
             row[1] = 'WEAPONS'
+            row[2] = 11
         elif "RAPE" in row[0] or "SEX" in row[0] or "PROSTITUTION" in row[0] or "PORNAGRAPHY" in row[0]:
             row[1] = 'SEX OFFENSE'
+            row[2] = 16
         elif "TRESPASSING" in row[0]:
             row[1] = 'TRESPASSING'
+            row[2] = 6
         elif "LOITERING" in row[0]:
             row[1] = 'LOITERING'
+            row[2] = 4
         elif "OBSTRUCT" in row[0]:
             row[1] = 'OBSTRUCTION'
+            row[2] = 5
         elif "LEAVING" in row[0]:
             row[1] = 'LEAVING ACCIDENT'
-        elif "HOMICIDE" in row[0]:
-            row[1] = 'HOMICIDE'
-        elif "DUI" in row[0]:
-            row[1] = 'DUI'
+            row[2] = 3
         elif "FAMILY" in row[0]:
             row[1] = 'CHILD ENDANGERMENT'
+            row[2] = 10
         elif "HOMICIDE" in row[0]:
             row[1] = 'HOMICIDE'
-        elif "HOMICIDE" in row[0]:
-            row[1] = 'HOMICIDE'
+            row[2] = 17
         else:
             row[1] = 'OTHER'
+            row[2] = 2
         cursor.updateRow(row)
 
 #Symbology voodoo magic, this was rough
@@ -99,19 +110,19 @@ if arcpy.Exists(SymbologyPath + r"\Symbology_Template.lyr"):
 else:
     arcpy.AddMessage("Symbology cannot be applied, Missing Symbology_Template.lyr")
 
-###and now we Kriging
-### Set environment settings
-##env.workspace = csvPath
-##
-### Set local variables
-##inFeatures = "ca_ozone_pts.shp"
-##field = "OZONE"
-##outRaster = "C:/output/krigoutput02"
-##cellSize = 2000
-##outVarRaster = "C:/output/outvariance"
-##kModel = "CIRCULAR"
-##kRadius = 20000
-##
-### Execute Kriging
-###arcpy.Kriging_3d(inFeatures, field, outRaster, kModel, cellSize, kRadius, outVarRaster)
-##arcpy.Kriging_3d(pointsVar, "Short_Desc", outfile + '\\' + "Krigout", kModel, cellSize, kRadius, outfile + '\\' + "outVar")
+#and now we Kriging
+# Set environment settings
+env.workspace = csvPath
+
+# Set local variables
+#inFeatures = "ca_ozone_pts.shp"
+field = "OZONE"
+#outRaster = "C:/output/krigoutput02"
+cellSize = 2000
+#outVarRaster = "C:/output/outvariance"
+kModel = "Spherical"
+kRadius = 20000
+
+# Execute Kriging
+#arcpy.Kriging_3d(inFeatures, field, outRaster, kModel, cellSize, kRadius, outVarRaster)
+arcpy.Kriging_3d(pointsVar, "Cri_Weight", outfile + '\\' + "Krigout", kModel, '', '', outfile + '\\' + "outVar")
