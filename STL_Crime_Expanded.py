@@ -24,7 +24,7 @@ csvPath = os.path.dirname(infile)
 csvFile = os.path.basename(infile)
 outName = os.path.splitext(csvFile)[0] + "_Points"
 spRef = arcpy.SpatialReference("NAD 1983 StatePlane Missouri East FIPS 2401 (US Feet)")
-
+NullCount = 0
 
 if arcpy.Exists(outfile) == False:
      arcpy.AddMessage("Creating GDB...")
@@ -40,7 +40,7 @@ pointsVar = outfile + '\\' + outName
 
 arcpy.AddField_management(pointsVar, "Short_Desc", "TEXT", "", "", 20 , "Short Crime Description", "NULLABLE", "REQUIRED")
 arcpy.AddField_management(pointsVar, "Cri_Weight", "LONG", "", "", 20, "Crime Weighting", "NULLABLE", "REQUIRED")
-fields = ['Description', 'Short_Desc', 'Cri_Weight']
+fields = ['Description','Short_Desc', 'Cri_Weight', 'XCoord', 'YCoord']
 
 #updateCursor to combine multiple/various crime types into categories
 with arcpy.da.UpdateCursor(pointsVar, fields) as cursor:
@@ -94,6 +94,10 @@ with arcpy.da.UpdateCursor(pointsVar, fields) as cursor:
         else:
             row[1] = 'OTHER'
             row[2] = 2
+        #need to remove weights from 0,0
+        if row[3] == 0 or row[4] == 0:
+             row[2] = None
+             NullCount = NullCount + 1
         cursor.updateRow(row)
 
 #Symbology voodoo magic, this was rough
@@ -114,15 +118,19 @@ else:
 # Set environment settings
 env.workspace = csvPath
 
-# Set local variables
-#inFeatures = "ca_ozone_pts.shp"
-field = "OZONE"
-#outRaster = "C:/output/krigoutput02"
-cellSize = 2000
-#outVarRaster = "C:/output/outvariance"
-kModel = "Spherical"
-kRadius = 20000
-
-# Execute Kriging
-#arcpy.Kriging_3d(inFeatures, field, outRaster, kModel, cellSize, kRadius, outVarRaster)
-arcpy.Kriging_3d(pointsVar, "Cri_Weight", outfile + '\\' + "Krigout", kModel, '', '', outfile + '\\' + "outVar")
+# Set local variables as Inputs
+cellSize = arcpy.GetParameterAsText(3)
+kModel = arcpy.GetParameterAsText(4)
+kRadius = arcpy.GetParameterAsText(5)
+KrigVar = outfile + '\\Krigout'
+arcpy.AddMessage("Applying Kriging Model..." + str(NullCount) + " features excluded due to no location information")
+if arcpy.CheckExtension("Spatial") == "Available":
+     arcpy.CheckOutExtension("Spatial")
+     # Execute Kriging
+     #arcpy.Kriging_3d(inFeatures, field, outRaster, kModel, cellSize, kRadius, outVarRaster)
+     arcpy.Kriging_3d(pointsVar, "Cri_Weight", KrigVar, kModel, cellSize, kRadius, outfile + '\\' + "outVar")
+     arcpy.CheckInExtension("Spatial")
+     KrigingLayer = arcpy.mapping.Layer(KrigVar)
+     arcpy.mapping.AddLayer(df, KrigingLayer,"AUTO_ARRANGE")
+else:
+     arcpy.AddMessage("KRIGING NOT RUN: Spatial Analyst Extension unavailable, please confirm your license availability and retry")    
