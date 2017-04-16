@@ -15,12 +15,11 @@ import os
 
 arcpy.env.overwriteOutput = True
 
-##env.workspace = r'H:\crime_data'
-##outputGDB = r'H:\crime_data\output.gdb\Jan_Crime'
 
 infile = arcpy.GetParameterAsText(0) #as CSV
 outfile = arcpy.GetParameterAsText(1) #as GDB
 csvPath = os.path.dirname(infile)
+workspace  = csvPath
 csvFile = os.path.basename(infile)
 outName = os.path.splitext(csvFile)[0] + "_Points"
 spRef = arcpy.SpatialReference("NAD 1983 StatePlane Missouri East FIPS 2401 (US Feet)")
@@ -122,15 +121,21 @@ env.workspace = csvPath
 cellSize = arcpy.GetParameterAsText(3)
 kModel = arcpy.GetParameterAsText(4)
 kRadius = arcpy.GetParameterAsText(5)
-KrigVar = outfile + '\\Krigout'
+KrigVar = outfile + '\\Krig_' + os.path.splitext(csvFile)[0]
+ClusterVar = outfile + '\\Clust_' + os.path.splitext(csvFile)[0]
 arcpy.AddMessage("Applying Kriging Model..." + str(NullCount) + " features excluded due to no location information")
 if arcpy.CheckExtension("Spatial") == "Available":
      arcpy.CheckOutExtension("Spatial")
      # Execute Kriging
-     #arcpy.Kriging_3d(inFeatures, field, outRaster, kModel, cellSize, kRadius, outVarRaster)
-     arcpy.Kriging_3d(pointsVar, "Cri_Weight", KrigVar, kModel, cellSize, kRadius, outfile + '\\' + "outVar")
-     arcpy.CheckInExtension("Spatial")
-     KrigingLayer = arcpy.mapping.Layer(KrigVar)
+     arcpy.Kriging_3d(pointsVar, "Cri_Weight", KrigVar, kModel, cellSize, kRadius, outfile + '\\' + "outVar" + os.path.splitext(csvFile)[0])
+     arcpy.Clip_management(KrigVar, "871520.475769538 982585.527924612 915313.586972065 1071019.48470838", KrigVar + "_Clip", csvPath +'\\STL_Boundary.lyr', "-3.402823e+038", "ClippingGeometry", "NO_MAINTAIN_EXTENT")
+
+     KrigingLayer = arcpy.mapping.Layer(KrigVar + "_Clip")
      arcpy.mapping.AddLayer(df, KrigingLayer,"AUTO_ARRANGE")
+
+#     SpWeigVar = 'SW_' + os.path.splitext(csvFile)[0] + ".swm"
+#     arcpy.GenerateSpatialWeightsMatrix_stats(pointsVar, "OBJECTID", SpWeigVar,"K_NEAREST_NEIGHBORS","#", "#", "#", 6, "NO_STANDARDIZATION")
+#     arcpy.ClustersOutliers_stats(pointsVar, "Cri_Weight", ClusterVar, "GET_SPATIAL_WEIGHTS_FROM_FILE", "EUCLIDEAN_DISTANCE", "NONE","#", SpWeigVar,"NO_FDR", 999)
+     arcpy.CheckInExtension("Spatial")
 else:
-     arcpy.AddMessage("KRIGING NOT RUN: Spatial Analyst Extension unavailable, please confirm your license availability and retry")    
+     arcpy.AddMessage("KRIGING NOT RUN: Spatial Analyst Extension unavailable, please confirm your license availability and retry")
