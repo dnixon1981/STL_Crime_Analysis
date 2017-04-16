@@ -128,14 +128,13 @@ if arcpy.CheckExtension("Spatial") == "Available":
      arcpy.CheckOutExtension("Spatial")
      # Execute Kriging
      arcpy.Kriging_3d(pointsVar, "Cri_Weight", KrigVar, kModel, cellSize, kRadius, outfile + '\\' + "outVar" + os.path.splitext(csvFile)[0])
-     arcpy.Clip_management(KrigVar, "871520.475769538 982585.527924612 915313.586972065 1071019.48470838", KrigVar + "_Clip", csvPath +'\\STL_Boundary.lyr', "-3.402823e+038", "ClippingGeometry", "NO_MAINTAIN_EXTENT")
+     if arcpy.Exists(SymbologyPath + r"\Symbology_Template.lyr"):
+        arcpy.Clip_management(KrigVar, "871520.475769538 982585.527924612 915313.586972065 1071019.48470838", KrigVar + "_Clip", csvPath +'\\STL_Boundary.lyr', "-3.402823e+038", "ClippingGeometry", "NO_MAINTAIN_EXTENT")
+     else:
+        arcpy.AddMessage("Raster cannot be clips, Missing STL_Boundary.lyr")
 
      KrigingLayer = arcpy.mapping.Layer(KrigVar + "_Clip")
      arcpy.mapping.AddLayer(df, KrigingLayer,"AUTO_ARRANGE")
-
-#     SpWeigVar = 'SW_' + os.path.splitext(csvFile)[0] + ".swm"
-#     arcpy.GenerateSpatialWeightsMatrix_stats(pointsVar, "OBJECTID", SpWeigVar,"K_NEAREST_NEIGHBORS","#", "#", "#", 6, "NO_STANDARDIZATION")
-#     arcpy.ClustersOutliers_stats(pointsVar, "Cri_Weight", ClusterVar, "GET_SPATIAL_WEIGHTS_FROM_FILE", "EUCLIDEAN_DISTANCE", "NONE","#", SpWeigVar,"NO_FDR", 999)
      arcpy.CheckInExtension("Spatial")
 else:
      arcpy.AddMessage("KRIGING NOT RUN: Spatial Analyst Extension unavailable, please confirm your license availability and retry")
